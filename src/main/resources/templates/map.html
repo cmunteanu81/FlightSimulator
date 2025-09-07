@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Matrix Map</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2rem; }
+        .error { color: #b00020; margin-bottom: 1rem; }
+        .container { max-width: 1100px; }
+        form { margin-bottom: 1.5rem; }
+        table { border-collapse: collapse; }
+        td {
+            width: 12px; height: 12px;
+            text-align: center; vertical-align: middle;
+            border: 1px solid #eee;
+            color: #222;
+            font-size: 10px;
+            background: #ffffff; /* default white background for all cells */
+        }
+        /* Color palette for values 0..9 */
+        .v-0 { background: #f0f0f0; }
+        .v-1 { background: #e1f5fe; }
+        .v-2 { background: #b3e5fc; }
+        .v-3 { background: #81d4fa; }
+        .v-4 { background: #4fc3f7; }
+        .v-5 { background: #ffecb3; }
+        .v-6 { background: #ffe082; }
+        .v-7 { background: #ffcc80; }
+        .v-8 { background: #ffab91; }
+        .v-9 { background: #ef9a9a; }
+        /* Fallback bucket classes */
+        .neg { background: #c8e6c9; }
+        .pos { background: #ffcdd2; }
+        .legend { font-size: 0.9rem; color: #555; margin-top: 0.5rem; }
+        .matrix-wrapper { overflow: auto; max-height: 80vh; max-width: 95vw; border: 1px solid #eee; padding: 6px; }
+        .muted { color: #777; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Build navigation map</h1>
+
+    <div th:if="${error}" class="error" th:text="${error}"></div>
+
+    <form th:action="@{/map}" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".txt" required />
+        <button type="submit">Render Map</button>
+    </form>
+
+    <div th:if="${matrix}">
+        <h2>Navigation Map</h2>
+        <div class="legend">
+            Map planes colored by value.
+            <span th:if="${minVal != null}">Min: <span th:text="${minVal}"></span></span>
+            <span th:if="${maxVal != null}"> | Max: <span th:text="${maxVal}"></span></span>
+            <div class="muted">
+                Map size: <span th:text="${rows}"></span>x<span th:text="${cols}"></span>
+                <span th:if="${sampled}">
+                    | Sampling step: <span th:text="${sampleStep}"></span>
+                    | Rendered: <span th:text="${renderedRows}"></span>x<span th:text="${renderedCols}"></span>
+                </span>
+            </div>
+        </div>
+        <div class="matrix-wrapper">
+            <table>
+                <tbody id="matrixBody">
+                <tr th:each="row,rowStat : ${matrix}">
+                    <td th:each="cell, colStat : ${row}"
+                        th:style="${colors[rowStat.index][colStat.index]} != null ? 'background:' + ${colors[rowStat.index][colStat.index]} : ''"
+                        th:text="${sampled} ? '' : ${cell}">
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="muted" th:if="${sampled}">
+            Note: Large matrix detected. Showing a sampled view for performance. Upload will still parse all values; min/max reflect the full matrix.
+        </div>
+    </div>
+</div>
+
+<script th:if="${matrix}">
+(function() {
+  const bodyEl = document.getElementById('matrixBody');
+  if (!bodyEl) return;
+  const fetchColors = async () => {
+    try {
+      const resp = await fetch('/map/colors', { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+      if (!resp.ok) return;
+      const colors = await resp.json();
+      if (!Array.isArray(colors) || colors.length === 0) return;
+      const rows = bodyEl.rows;
+      for (let i = 0; i < rows.length && i < colors.length; i++) {
+        const cells = rows[i].cells;
+        const colorRow = colors[i];
+        if (!Array.isArray(colorRow)) continue;
+        for (let j = 0; j < cells.length && j < colorRow.length; j++) {
+          const col = colorRow[j];
+          if (typeof col === 'string' && col) {
+            cells[j].style.backgroundColor = col;
+          }
+        }
+      }
+    } catch (e) {
+      // swallow errors to keep UI responsive
+    }
+  };
+  // initial and periodic refresh
+  fetchColors();
+  setInterval(fetchColors, 1000);
+})();
+</script>
+
+</body>
+</html>
