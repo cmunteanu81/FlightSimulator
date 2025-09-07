@@ -1,0 +1,95 @@
+openapi: 3.0.3
+info:
+  title: Flight Center API
+  version: "1.0.0"
+  description: REST API for path retrieval and drone location handling.
+servers:
+  - url: http://localhost:8080
+paths:
+  /path:
+    get:
+      summary: Retrieves a new flight path for a drone
+      operationId: getPath
+      parameters:
+        - name: droneName
+          in: query
+          description: Name of the drone
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response containing the path for the drone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicPathResponse'
+        '400':
+          description: Bad request
+        '500':
+          description: Server error
+  /location:
+    post:
+      summary: Submit the current position and (optional) the destination target for a drone
+      operationId: postLocation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BasicLocationRequest'
+      responses:
+        '200':
+          description: Echoed request or processed location information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasicLocationRequest'
+        '400':
+          description: Validation error
+        '500':
+          description: Server error
+components:
+  schemas:
+    PositionDTO:
+      type: object
+      properties:
+        x:
+          type: integer
+          format: int32
+        y:
+          type: integer
+          format: int32
+        value:
+          type: integer
+          format: int32
+          description: Optional value associated with the position
+      required:
+        - x
+        - y
+    BasicPathResponse:
+      type: object
+      properties:
+        droneName:
+          type: string
+        positions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PositionDTO'
+      required:
+        - droneName
+        - positions
+    BasicLocationRequest:
+      type: object
+      properties:
+        droneName:
+          type: string
+        currentLocation:
+          $ref: '#/components/schemas/PositionDTO'
+        targetLocation:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/PositionDTO'
+      required:
+        - droneName
+        - currentLocation
