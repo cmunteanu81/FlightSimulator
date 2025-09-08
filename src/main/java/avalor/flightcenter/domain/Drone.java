@@ -2,7 +2,8 @@ package avalor.flightcenter.domain;
 
 import jakarta.validation.constraints.NotNull;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class Drone {
@@ -10,8 +11,8 @@ public class Drone {
     private final String name;
     private Position currentPosition;
     private Position targetPosition;
-    private LinkedList<Position> targetPath;
-    private LinkedList<Position> historyPath;
+    private List<Position> targetPath;
+    private final List<Position> historyPath = Collections.synchronizedList(new ArrayList<>());
     private DroneState droneState;
 
 
@@ -20,7 +21,6 @@ public class Drone {
         this.currentPosition = Position.builder(initialPosition).build();
         this.targetPosition = null;
         targetPath = null;
-        historyPath = null;
         droneState = DroneState.IDLE;
     }
 
@@ -45,7 +45,7 @@ public class Drone {
     }
 
     public void setTargetPath(List<Position> targetPath) {
-        this.targetPath = new LinkedList<>(targetPath);
+            this.targetPath = targetPath;
     }
 
     public boolean isMoving() {
@@ -56,12 +56,6 @@ public class Drone {
         return currentPosition.equals(targetPosition);
     }
 
-    public void clearHistoryPath() {
-        if (historyPath != null) {
-            historyPath.clear();
-        }
-    }
-
     public DroneState getDroneState() {
         return droneState;
     }
@@ -70,28 +64,23 @@ public class Drone {
         this.droneState = droneState;
     }
 
-    public LinkedList<Position> getCurrentPath() {
+    public List<Position> getTargetPath() {
         return targetPath;
     }
 
-    public Position getNextPossibleMove() {
+    public synchronized Position getNextPossibleMove() {
         if (targetPath == null || targetPath.isEmpty()) {
             return null;
         }
-
-        return targetPath.peekFirst();
+        return targetPath.getFirst();
     }
 
-    public Position moveToNextPosition() {
+    public synchronized Position moveToNextPosition() {
         if (targetPath == null || targetPath.isEmpty()) {
             return null;
         }
-
-        Position nextPosition = targetPath.pollFirst();
+        Position nextPosition = targetPath.removeFirst();
         if (nextPosition != null) {
-            if (historyPath == null) {
-                historyPath = new LinkedList<>();
-            }
             historyPath.add(currentPosition);
             currentPosition = nextPosition;
             return currentPosition;
@@ -100,11 +89,11 @@ public class Drone {
         }
     }
 
-    public Position goBack() {
-        if (historyPath == null || historyPath.isEmpty()) {
+    public synchronized Position goBack() {
+        if (historyPath.isEmpty()) {
             return null;
         }
-        Position lastPosition = historyPath.pollLast();
+        Position lastPosition = historyPath.removeLast();
         if (lastPosition != null) {
             currentPosition = lastPosition;
             return currentPosition;
@@ -116,9 +105,7 @@ public class Drone {
         return historyPath;
     }
 
-    public void clearHistory() {
-        if (historyPath != null) {
+    public synchronized void clearHistory() {
             historyPath.clear();
-        }
     }
 }

@@ -47,6 +47,8 @@ public class PathCalculator {
         Position closestPosition = null;
         double minDistance = Double.MAX_VALUE;
         for (Position target : mostValuableTargets) {
+            if (crtPosition.equals(target)) continue;
+
             double distance = calculateDistance(crtPosition, target);
             if (distance < minDistance) {
                 minDistance = distance;
@@ -72,7 +74,7 @@ public class PathCalculator {
         allPositions.sort(
                 java.util.Comparator
                         .comparingInt((Position p) -> p.getValue() + p.getDecay())
-                        .thenComparingInt(Position::getValue)
+                        .thenComparingInt(Position::getDecay)
                         .reversed()
         );
         final int maxValue = allPositions.getFirst().getValue();

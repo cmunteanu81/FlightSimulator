@@ -5,9 +5,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.Objects;
 
 public class Position {
-    private int posX;
-    private int posY;
-    private int value;
+    private final int MAX_DECAY_VAL = Integer.MAX_VALUE;
+    private final int posX;
+    private final int posY;
+    private final int value;
     private int decay;
     private boolean isOccupied;
 
@@ -69,7 +70,11 @@ public class Position {
     }
 
     public void setDecay(int decay) {
-        this.decay = decay;
+        if (decay <= MAX_DECAY_VAL) {
+            this.decay = decay;
+        } else {
+            this.decay = MAX_DECAY_VAL;
+        }
     }
 
     public boolean isOccupied() {

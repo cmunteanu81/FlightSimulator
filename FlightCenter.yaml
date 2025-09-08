@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: Flight Center API
-  version: "1.0.0"
-  description: REST API for path retrieval and drone location handling.
+  version: "1.0.1"
+  description: REST API for path retrieval, drone initialization, and location handling.
 servers:
   - url: http://localhost:8080
 paths:
@@ -45,6 +45,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BasicLocationRequest'
+        '400':
+          description: Validation error
+        '500':
+          description: Server error
+  /init:
+    post:
+      summary: Initialize the system with a list of drones and their current positions
+      operationId: init
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BasicInitRequest'
+      responses:
+        '200':
+          description: Initialization accepted
         '400':
           description: Validation error
         '500':
@@ -93,3 +110,26 @@ components:
       required:
         - droneName
         - currentLocation
+    DroneDTO:
+      type: object
+      properties:
+        name:
+          type: string
+        currentLocation:
+          $ref: '#/components/schemas/PositionDTO'
+        targetLocation:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/PositionDTO'
+      required:
+        - name
+        - currentLocation
+    BasicInitRequest:
+      type: object
+      properties:
+        drones:
+          type: array
+          items:
+            $ref: '#/components/schemas/DroneDTO'
+      required:
+        - drones
