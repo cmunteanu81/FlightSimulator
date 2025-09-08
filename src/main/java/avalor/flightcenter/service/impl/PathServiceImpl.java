@@ -1,13 +1,10 @@
 package avalor.flightcenter.service.impl;
 
-import avalor.flightcenter.api.dto.BasicPathResponse;
-import avalor.flightcenter.api.dto.PositionDTO;
 import avalor.flightcenter.calculator.PathCalculator;
 import avalor.flightcenter.domain.Position;
 import avalor.flightcenter.service.MapService;
 import avalor.flightcenter.service.PathService;
 import avalor.flightcenter.utils.DecaySimulator;
-import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -59,7 +56,7 @@ public class PathServiceImpl implements PathService, Runnable {
             if (!visitedPositions.contains(newPosition)) {
                 visitedPositions.add(newPosition);
             }
-            mapService.setValue(newPosition.getPosX(), newPosition.getPosY(), (droneNames.indexOf(droneName) + 3));
+            mapService.setColor(newPosition.getPosX(), newPosition.getPosY(), (droneNames.indexOf(droneName) + 3));
         }
     }
 
@@ -104,12 +101,9 @@ public class PathServiceImpl implements PathService, Runnable {
         dronePositions.put(droneName, dronePosition);
         travelledPath.put(droneName, new ArrayList<>());
         travelledPath.get(droneName).add(dronePosition);
-        mapService.setValue(dronePosition.getPosX(), dronePosition.getPosY(), (droneNames.indexOf(droneName) + 3));
+        mapService.setColor(dronePosition.getPosX(), dronePosition.getPosY(), (droneNames.indexOf(droneName) + 3));
         System.out.println("Initializing drone " + droneName + " at position (" + x + "," + y + ")");
 
-        // TODO: Remove this crap
-//         dronePaths.put(droneName, new ArrayList<>());
-//        dronePaths.put(droneName, PathCalculator.calculatePath(dronePosition, navigationPlanes, visitedPositions));
         return true;
     }
 
@@ -156,12 +150,14 @@ public class PathServiceImpl implements PathService, Runnable {
                         System.out.println("Target reached; start over");
                         visitedPositions.clear();
                         travelledPath.get(droneName).clear();
-                        mapService.setMatrix(navigationPlanes.getFirst().size(), navigationPlanes.size());
+                        mapService.initColorMatrix(navigationPlanes.getFirst().size(), navigationPlanes.size());
 
                         setPosition(droneName, dronePositions.get(droneName));
                     }
                 }
             }
+
+            // TODO Add map decay here
         }
     }
 }

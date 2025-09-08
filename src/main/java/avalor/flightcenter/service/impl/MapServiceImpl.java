@@ -8,7 +8,7 @@ import java.util.List;
 
 @Service
 public class MapServiceImpl implements MapService {
-    private final List<List<Integer>> colorMatrix = new ArrayList<>();
+    private final List<List<String>> colorMatrix = new ArrayList<>();
 
     private static final String[] PALETTE = new String[]{
             "#f7f7f7", // 0 - background / zero
@@ -24,42 +24,46 @@ public class MapServiceImpl implements MapService {
     };
 
     @Override
-    public List<List<String>> computeColors() {
-        if (colorMatrix.isEmpty() || colorMatrix.getFirst().isEmpty()) {
-            return new ArrayList<>();
+    public synchronized List<List<String>> getColors() {
+        if (colorMatrix.isEmpty()) {
+            return List.of();
         }
-        int rows = colorMatrix.size();
-        int cols = colorMatrix.getFirst().size();
-
-        List<List<String>> colors = new ArrayList<>(rows);
-        for (List<Integer> row : colorMatrix) {
-            List<String> cRow = new ArrayList<>(cols);
-            for (int v : row) {
-                if (v == 0) {
-                    cRow.add(PALETTE[v]); // special case for zero
-                } else {
-                    cRow.add(PALETTE[v]);
-                }
-            }
-            colors.add(cRow);
+        List<List<String>> copy = new ArrayList<>(colorMatrix.size());
+        for (List<String> row : colorMatrix) {
+            copy.add(List.copyOf(row));
         }
-        return colors;
+        return List.copyOf(copy);
     }
 
     @Override
-    public void setMatrix(int rows, int cols) {
+    public synchronized void initColorMatrix(int rows, int cols) {
+        if (rows <= 0 || cols <= 0) {
+            colorMatrix.clear();
+            return;
+        }
         colorMatrix.clear();
         for (int i = 0; i < rows; i++) {
-            colorMatrix.add(new ArrayList<>());
-            for (int j = 0; j < rows; j++) {
-                colorMatrix.get(i).add(0);
+            List<String> row = new ArrayList<>(cols);
+            for (int j = 0; j < cols; j++) {
+                row.add(PALETTE[0]);
             }
+            colorMatrix.add(row);
         }
     }
 
     @Override
-    public void setValue(int posX, int posY, int value) {
-        colorMatrix.get(posY).set(posX, value);
-
+    public synchronized void setColor(int posX, int posY, int value) {
+        if (colorMatrix.isEmpty()) {
+            return;
+        }
+        if (posY < 0 || posY >= colorMatrix.size()) {
+            return;
+        }
+        List<String> row = colorMatrix.get(posY);
+        if (row == null || posX < 0 || posX >= row.size()) {
+            return;
+        }
+        String color = PALETTE[Math.floorMod(value, PALETTE.length)];
+        row.set(posX, color);
     }
 }

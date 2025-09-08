@@ -22,7 +22,7 @@ public class PathCalculator {
         Position nextTarget = getClosestTarget(crtPosition, getMostValuableTargets(navigationPlanes, visitedPositions));
 
         if (nextTarget != null) {
-            // Add an intermediate point if the target is too far away
+            // Add an intermediate point if the target is too far away, to limit the path execution time
             nextTarget = getIntermediatePosition(startPosition, nextTarget, MAX_DISTANCE);
             // Compute path
             while (crtPosition != null && !crtPosition.equals(nextTarget)) {

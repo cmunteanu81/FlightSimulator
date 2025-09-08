@@ -43,7 +43,7 @@ public class MapController {
     @GetMapping(value = "/colors", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public List<List<String>> getLatestColors() {
-        List<List<String>> local = mapService.computeColors();
+        List<List<String>> local = mapService.getColors();
         if (local == null || local.isEmpty()) {
             return List.of();
         }
@@ -79,7 +79,7 @@ public class MapController {
             }
 
             // Initialize the navigation planes
-            mapService.setMatrix(toRender.size(), toRender.getFirst().size());
+            mapService.initColorMatrix(toRender.size(), toRender.getFirst().size());
 
             pathService.setNavigationPlanes(toRender);
             pathService.setPosition("Drone1", new avalor.flightcenter.domain.Position(0, 0, matrix.get(0).get(0)));
@@ -89,7 +89,7 @@ public class MapController {
             pathService.setPosition("Drone5", new avalor.flightcenter.domain.Position(4, 0, matrix.get(4).get(0)));
 
             model.addAttribute("matrix", toRender);
-            model.addAttribute("colors", mapService.computeColors());
+            model.addAttribute("colors", mapService.getColors());
             model.addAttribute("maxVal", findMax(matrix));
             model.addAttribute("minVal", findMin(matrix));
             model.addAttribute("rows", rows);
