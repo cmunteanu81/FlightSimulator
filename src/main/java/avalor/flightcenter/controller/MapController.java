@@ -1,5 +1,6 @@
 package avalor.flightcenter.controller;
 import avalor.flightcenter.service.MapService;
+import avalor.flightcenter.service.PathService;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -23,12 +24,12 @@ import java.util.List;
 public class MapController {
 
     private final MapService mapService;
+    private final PathService pathService;
 
-    // Store last rendered matrix for color refreshes
-    private volatile List<List<Integer>> lastRenderedMatrix;
-
-    public MapController(MapService mapService) {
+    public MapController(MapService mapService, PathService pathService) {
         this.mapService = mapService;
+        this.pathService = pathService;
+        pathService.setMapService(mapService);
     }
 
     private static final int MAX_CELLS_FOR_FULL_RENDER = 200_000; // safeguard to avoid 1M+ DOM nodes
@@ -42,11 +43,11 @@ public class MapController {
     @GetMapping(value = "/colors", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public List<List<String>> getLatestColors() {
-        List<List<Integer>> local = this.lastRenderedMatrix;
+        List<List<String>> local = mapService.computeColors();
         if (local == null || local.isEmpty()) {
             return List.of();
         }
-        return mapService.computeColors(local);
+        return local;
     }
 
     @PostMapping
@@ -77,10 +78,15 @@ public class MapController {
                 toRender = matrix;
             }
 
+            // Initialize the navigation planes
+            pathService.setNavigationPlanes(toRender);
+            pathService.setPosition("Drone1", new avalor.flightcenter.domain.Position(0, 0, matrix.getFirst().getFirst()));
+
+            mapService.setMatrix(toRender.size(), toRender.getFirst().size());
+            mapService.setValue(0,0,4);
+
             model.addAttribute("matrix", toRender);
-            model.addAttribute("colors", mapService.computeColors(toRender));
-            // Keep last rendered matrix in memory for auto-refresh
-            this.lastRenderedMatrix = toRender;
+            model.addAttribute("colors", mapService.computeColors());
             model.addAttribute("maxVal", findMax(matrix));
             model.addAttribute("minVal", findMin(matrix));
             model.addAttribute("rows", rows);

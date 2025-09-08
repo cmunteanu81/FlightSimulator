@@ -8,6 +8,7 @@ import java.util.List;
 
 @Service
 public class MapServiceImpl implements MapService {
+    private final List<List<Integer>> colorMatrix = new ArrayList<>();
 
     private static final String[] PALETTE = new String[]{
             "#f0f0f0", // 0
@@ -23,31 +24,42 @@ public class MapServiceImpl implements MapService {
     };
 
     @Override
-    public List<List<String>> computeColors(List<List<Integer>> matrix) {
-        int rows = matrix.size();
-        int cols = matrix.getFirst().size();
-        int min = Integer.MAX_VALUE;
-        int max = Integer.MIN_VALUE;
-        for (List<Integer> row : matrix) {
-            for (int v : row) {
-                if (v < min) min = v;
-                if (v > max) max = v;
-            }
+    public List<List<String>> computeColors() {
+        if (colorMatrix.isEmpty() || colorMatrix.getFirst().isEmpty()) {
+            return new ArrayList<>();
         }
-        // Handle edge case: all equal values -> use middle of palette
-        int range = Math.max(1, max - min);
+        int rows = colorMatrix.size();
+        int cols = colorMatrix.getFirst().size();
 
         List<List<String>> colors = new ArrayList<>(rows);
-        for (List<Integer> row : matrix) {
+        for (List<Integer> row : colorMatrix) {
             List<String> cRow = new ArrayList<>(cols);
             for (int v : row) {
-                int bucket = (int) Math.floor((double) (v - min) / range * (PALETTE.length - 1));
-                if (bucket < 0) bucket = 0;
-                if (bucket >= PALETTE.length) bucket = PALETTE.length - 1;
-                cRow.add(PALETTE[bucket]);
+                if (v == 0) {
+                    cRow.add(PALETTE[0]); // special case for zero
+                } else {
+                    cRow.add(PALETTE[9]);
+                }
             }
             colors.add(cRow);
         }
         return colors;
+    }
+
+    @Override
+    public void setMatrix(int rows, int cols) {
+        colorMatrix.clear();
+        for (int i = 0; i < rows; i++) {
+            colorMatrix.add(new ArrayList<>());
+            for (int j = 0; j < rows; j++) {
+                colorMatrix.get(i).add(0);
+            }
+        }
+    }
+
+    @Override
+    public void setValue(int posX, int posY, int value) {
+        colorMatrix.get(posY).set(posX, value);
+
     }
 }
