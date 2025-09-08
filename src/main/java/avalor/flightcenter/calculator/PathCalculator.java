@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 public class PathCalculator {
-
+    static private final Double MAX_DISTANCE = 6.0;
     private PathCalculator() {}
 
     public synchronized static List<Position> calculatePath(Position startPosition, List<List<Position>> navigationPlanes, List<Position> visitedPositions) {
@@ -22,6 +22,9 @@ public class PathCalculator {
         Position nextTarget = getClosestTarget(crtPosition, getMostValuableTargets(navigationPlanes, visitedPositions));
 
         if (nextTarget != null) {
+            // Add an intermediate point if the target is too far away
+            nextTarget = getIntermediatePosition(startPosition, nextTarget, MAX_DISTANCE);
+            // Compute path
             while (crtPosition != null && !crtPosition.equals(nextTarget)) {
                 // Get the next node towards the target
                 crtPosition = getNextPositionInPath(navigationPlanes, crtPosition, nextTarget);
@@ -137,6 +140,21 @@ public class PathCalculator {
 
         return Position.builder(navigationPlanes.get(nextY).get(nextX)).build();
     }
+    private static Position getIntermediatePosition(Position startPosition, Position targetPosition, double maximumDistance) {
+        double distance = calculateDistance(startPosition, targetPosition);
+        double starX = startPosition.getPosX();
+        double starY = startPosition.getPosY();
+        double targetX = targetPosition.getPosX();
+        double targetY = targetPosition.getPosY();
 
+        if (Double.compare(distance, maximumDistance) > 0) {
+            double ratio = maximumDistance / distance;
+            double intX = (Double.compare(starX, targetX) > 0) ? starX - ratio * (starX - targetX) : starX + ratio * (targetX - starX);
+            double intY = (Double.compare(starY, targetY) > 0) ? starY - ratio * (starY - targetY) : starY + ratio * (targetY - starY);
 
+            return new Position((int)Math.floor(intX), (int)Math.floor(intY), 0);
+        } else {
+            return targetPosition;
+        }
+    }
 }
