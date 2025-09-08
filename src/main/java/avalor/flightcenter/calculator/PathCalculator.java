@@ -11,33 +11,52 @@ public class PathCalculator {
     static private final Double MAX_DISTANCE = 6.0;
     private PathCalculator() {}
 
-    public synchronized static List<Position> calculatePath(Position startPosition, List<List<Position>> navigationPlanes, List<Position> visitedPositions) {
-        if (startPosition == null || navigationPlanes == null || navigationPlanes.isEmpty()) {
+    public synchronized static List<Position> calculatePath(Position startPosition, Position targetPosition, List<List<Position>> navigationPlanes) {
+        if (startPosition == null || targetPosition == null || navigationPlanes == null || navigationPlanes.isEmpty()) {
             return new ArrayList<>();
         }
 
         List<Position> path = new ArrayList<>();
         Position crtPosition = Position.builder(startPosition).build();
         // Get the closest position from the most valuable targets available
-        Position nextTarget = getClosestTarget(crtPosition, getMostValuableTargets(navigationPlanes, visitedPositions));
-
-        if (nextTarget != null) {
-            // Add an intermediate point if the target is too far away, to limit the path execution time
-            nextTarget = getIntermediatePosition(startPosition, nextTarget, MAX_DISTANCE);
-            // Compute path
-            while (crtPosition != null && !crtPosition.equals(nextTarget)) {
-                // Get the next node towards the target
-                crtPosition = getNextPositionInPath(navigationPlanes, crtPosition, nextTarget);
-                if (crtPosition != null) {
-                    path.add(crtPosition);
-                }
+        Position nextTarget = Position.builder(targetPosition).build();
+        // Add an intermediate point if the target is too far away, to limit the path execution time
+        nextTarget = getIntermediatePosition(startPosition, nextTarget, MAX_DISTANCE);
+        // Compute path
+        while (crtPosition != null && !crtPosition.equals(nextTarget)) {
+            // Get the next node towards the target
+            crtPosition = getNextPositionInPath(navigationPlanes, crtPosition, nextTarget);
+            if (crtPosition != null) {
+                path.add(crtPosition);
             }
         }
 
         return path;
     }
 
-    public static List<Position> getMostValuableTargets(List<List<Position>> navigationPlanes, List<Position> exclude) {
+    public static Position getClosestTarget(Position crtPosition, List<List<Position>> navigationPlanes, List<Position> visitedPositions) {
+
+        if (crtPosition == null) {
+            return null;
+        }
+        // Gte the most valuable targets
+        List<Position> mostValuableTargets = getMostValuableTargets(navigationPlanes, visitedPositions);
+        if (mostValuableTargets.isEmpty()) {
+            return null;
+        }
+        Position closestPosition = null;
+        double minDistance = Double.MAX_VALUE;
+        for (Position target : mostValuableTargets) {
+            double distance = calculateDistance(crtPosition, target);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestPosition = target;
+            }
+        }
+        return closestPosition;
+    }
+
+    private static List<Position> getMostValuableTargets(List<List<Position>> navigationPlanes, List<Position> exclude) {
         List<Position> allPositions = new ArrayList<>();
         for (List<Position> row : navigationPlanes) {
             for (Position position : row) {
@@ -59,22 +78,6 @@ public class PathCalculator {
         final int maxValue = allPositions.getFirst().getValue();
         allPositions = allPositions.stream().filter(n -> n.getValue() == maxValue).toList();
         return allPositions;
-    }
-
-    private static Position getClosestTarget(Position crtPosition, List<Position> positions) {
-        if (crtPosition == null || positions == null || positions.isEmpty()) {
-            return null;
-        }
-        Position closestPosition = null;
-        double minDistance = Double.MAX_VALUE;
-        for (Position position : positions) {
-            double distance = calculateDistance(crtPosition, position);
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestPosition = position;
-            }
-        }
-        return closestPosition;
     }
 
     private static double calculateDistance(Position source, Position destination) {
