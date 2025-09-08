@@ -11,7 +11,7 @@ public class PathCalculator {
 
     private PathCalculator() {}
 
-    public static List<Position> calculatePath(Position startPosition, List<List<Position>> navigationPlanes, List<Position> visitedPositions) {
+    public synchronized static List<Position> calculatePath(Position startPosition, List<List<Position>> navigationPlanes, List<Position> visitedPositions) {
         if (startPosition == null || navigationPlanes == null || navigationPlanes.isEmpty()) {
             return new ArrayList<>();
         }
@@ -20,14 +20,15 @@ public class PathCalculator {
         Position crtPosition = Position.builder(startPosition).build();
         // Get the closest position from the most valuable targets available
         Position nextTarget = getClosestTarget(crtPosition, getMostValuableTargets(navigationPlanes, visitedPositions));
-        if (nextTarget != null) {
-//            System.out.println("New target acquired: (" + nextTarget.getPosX() + "," + nextTarget.getPosY() + "); value: " + nextTarget.getValue());
-        }
 
-        while (crtPosition != null && !crtPosition.equals(nextTarget) ) {
-            // Get the next node towards the target
-            crtPosition = getNextPositionInPath(navigationPlanes, crtPosition, nextTarget);
-            path.add(crtPosition);
+        if (nextTarget != null) {
+            while (crtPosition != null && !crtPosition.equals(nextTarget)) {
+                // Get the next node towards the target
+                crtPosition = getNextPositionInPath(navigationPlanes, crtPosition, nextTarget);
+                if (crtPosition != null) {
+                    path.add(crtPosition);
+                }
+            }
         }
 
         return path;

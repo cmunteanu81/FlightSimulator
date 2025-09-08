@@ -11,16 +11,16 @@ public class MapServiceImpl implements MapService {
     private final List<List<Integer>> colorMatrix = new ArrayList<>();
 
     private static final String[] PALETTE = new String[]{
-            "#f0f0f0", // 0
-            "#e1f5fe", // 1
-            "#b3e5fc", // 2
-            "#81d4fa", // 3
-            "#4fc3f7", // 4
-            "#ffecb3", // 5
-            "#ffe082", // 6
-            "#ffcc80", // 7
-            "#ffab91", // 8
-            "#ef9a9a"  // 9
+            "#f7f7f7", // 0 - background / zero
+            "#e41a1c", // 1 - red
+            "#377eb8", // 2 - blue
+            "#4daf4a", // 3 - green
+            "#984ea3", // 4 - purple
+            "#ff7f00", // 5 - orange
+            "#ffff33", // 6 - yellow
+            "#a65628", // 7 - brown
+            "#f781bf", // 8 - pink
+            "#17becf"  // 9 - cyan
     };
 
     @Override
@@ -36,9 +36,9 @@ public class MapServiceImpl implements MapService {
             List<String> cRow = new ArrayList<>(cols);
             for (int v : row) {
                 if (v == 0) {
-                    cRow.add(PALETTE[0]); // special case for zero
+                    cRow.add(PALETTE[v]); // special case for zero
                 } else {
-                    cRow.add(PALETTE[9]);
+                    cRow.add(PALETTE[v]);
                 }
             }
             colors.add(cRow);

@@ -79,11 +79,14 @@ public class MapController {
             }
 
             // Initialize the navigation planes
-            pathService.setNavigationPlanes(toRender);
-            pathService.setPosition("Drone1", new avalor.flightcenter.domain.Position(0, 0, matrix.getFirst().getFirst()));
-
             mapService.setMatrix(toRender.size(), toRender.getFirst().size());
-            mapService.setValue(0,0,4);
+
+            pathService.setNavigationPlanes(toRender);
+            pathService.setPosition("Drone1", new avalor.flightcenter.domain.Position(0, 0, matrix.get(0).get(0)));
+            pathService.setPosition("Drone2", new avalor.flightcenter.domain.Position(1, 0, matrix.get(1).get(0)));
+            pathService.setPosition("Drone3", new avalor.flightcenter.domain.Position(2, 0, matrix.get(2).get(0)));
+            pathService.setPosition("Drone4", new avalor.flightcenter.domain.Position(3, 0, matrix.get(3).get(0)));
+            pathService.setPosition("Drone5", new avalor.flightcenter.domain.Position(4, 0, matrix.get(4).get(0)));
 
             model.addAttribute("matrix", toRender);
             model.addAttribute("colors", mapService.computeColors());
