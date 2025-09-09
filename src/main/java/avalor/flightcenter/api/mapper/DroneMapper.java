@@ -1,9 +1,7 @@
 package avalor.flightcenter.api.mapper;
 
 import avalor.flightcenter.api.dto.DroneDTO;
-import avalor.flightcenter.api.dto.PositionDTO;
 import avalor.flightcenter.domain.Drone;
-import avalor.flightcenter.domain.Position;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Mappings;
@@ -29,8 +27,7 @@ public interface DroneMapper {
             @Mapping(target = "currentPosition", source = "currentLocation"),
             @Mapping(target = "targetPosition", source = "targetLocation"),
             @Mapping(target = "targetPath", ignore = true),
-            @Mapping(target = "historyPath", ignore = true),
-            @Mapping(target = "droneState", ignore = true)
+            @Mapping(target = "historyPath", ignore = true)
     })
     Drone toDomain(DroneDTO dto);
 

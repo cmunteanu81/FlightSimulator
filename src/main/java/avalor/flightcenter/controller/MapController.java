@@ -20,7 +20,7 @@ import java.util.List;
 @RequestMapping("/map")
 public class MapController {
 
-    private static final int MAX_CELLS_FOR_FULL_RENDER = 200_000; // safeguard to avoid 1M+ DOM nodes
+    private static final int MAX_CELLS_FOR_FULL_RENDER = 1_000_000; // safeguard to avoid 1M+ DOM nodes
     private final MapService mapService;
     private final PathService pathService;
 
