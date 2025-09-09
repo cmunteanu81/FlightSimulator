@@ -3,13 +3,13 @@ package avalor.flightcenter.calculator;
 import avalor.flightcenter.domain.Position;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class PathCalculator {
     static private final Double MAX_DISTANCE = 6.0;
-    private PathCalculator() {}
+
+    private PathCalculator() {
+    }
 
     public synchronized static List<Position> calculatePath(Position startPosition, Position targetPosition, List<List<Position>> navigationPlanes) {
         if (startPosition == null || targetPosition == null || navigationPlanes == null || navigationPlanes.isEmpty()) {
@@ -145,6 +145,7 @@ public class PathCalculator {
 
         return Position.builder(navigationPlanes.get(nextY).get(nextX)).build();
     }
+
     private static Position getIntermediatePosition(Position startPosition, Position targetPosition, double maximumDistance) {
         double distance = calculateDistance(startPosition, targetPosition);
         double starX = startPosition.getPosX();
@@ -157,7 +158,7 @@ public class PathCalculator {
             double intX = (Double.compare(starX, targetX) > 0) ? starX - ratio * (starX - targetX) : starX + ratio * (targetX - starX);
             double intY = (Double.compare(starY, targetY) > 0) ? starY - ratio * (starY - targetY) : starY + ratio * (targetY - starY);
 
-            return new Position((int)Math.floor(intX), (int)Math.floor(intY), 0);
+            return new Position((int) Math.floor(intX), (int) Math.floor(intY), 0);
         } else {
             return targetPosition;
         }

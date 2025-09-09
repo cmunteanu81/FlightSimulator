@@ -1,15 +1,12 @@
 package avalor.flightcenter.controller;
+
 import avalor.flightcenter.service.MapService;
 import avalor.flightcenter.service.PathService;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
@@ -23,6 +20,7 @@ import java.util.List;
 @RequestMapping("/map")
 public class MapController {
 
+    private static final int MAX_CELLS_FOR_FULL_RENDER = 200_000; // safeguard to avoid 1M+ DOM nodes
     private final MapService mapService;
     private final PathService pathService;
 
@@ -31,8 +29,6 @@ public class MapController {
         this.pathService = pathService;
         pathService.setMapService(mapService);
     }
-
-    private static final int MAX_CELLS_FOR_FULL_RENDER = 200_000; // safeguard to avoid 1M+ DOM nodes
 
     @GetMapping
     public String uploadForm() {
@@ -97,15 +93,9 @@ public class MapController {
                 toRender = matrix;
             }
 
-            // Initialize the navigation planes
+            // Initialize the services with the new data matrix
             mapService.init(toRender.size(), toRender.getFirst().size());
-
             pathService.init(toRender);
-//            pathService.addDrone("Drone1", new avalor.flightcenter.domain.Position(0, 0, matrix.get(0).get(0)));
-//            pathService.addDrone("Drone2", new avalor.flightcenter.domain.Position(1, 0, matrix.get(1).get(0)));
-//            pathService.addDrone("Drone3", new avalor.flightcenter.domain.Position(2, 0, matrix.get(2).get(0)));
-//            pathService.addDrone("Drone4", new avalor.flightcenter.domain.Position(3, 0, matrix.get(3).get(0)));
-//            pathService.addDrone("Drone5", new avalor.flightcenter.domain.Position(4, 0, matrix.get(4).get(0)));
 
             model.addAttribute("matrix", toRender);
             model.addAttribute("colors", mapService.getColors());

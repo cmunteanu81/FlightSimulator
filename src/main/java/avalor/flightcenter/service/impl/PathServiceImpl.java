@@ -77,11 +77,15 @@ public class PathServiceImpl implements PathService, Runnable {
 
     @Override
     public List<Position> getPathForDrone(String droneName) {
-        // TODO Fix this or remove the functionality
-        List<Position> positions = new ArrayList<>();
-
-//        positions = PathCalculator.calculatePath(dronePositions.get(droneName), navigationPlanes, visitedPositions);
-        return positions;
+        List<Position> droneFlightPath = new ArrayList<>();
+        if (droneName == null) {
+            return droneFlightPath;
+        }
+        Drone crtDrone = findDroneByName(droneName);
+        if (crtDrone != null) {
+            droneFlightPath = crtDrone.getTargetPath();
+        }
+        return droneFlightPath;
     }
 
     @Override
