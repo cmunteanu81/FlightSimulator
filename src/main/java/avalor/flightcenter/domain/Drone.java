@@ -2,9 +2,7 @@ package avalor.flightcenter.domain;
 
 import jakarta.validation.constraints.NotNull;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class Drone {
     @NotNull
@@ -82,5 +80,14 @@ public class Drone {
         } else {
             return null;
         }
+    }
+
+    public synchronized int getTravelledPathValue() {
+        return Optional.of(historyPath)
+                .orElseGet(List::of)
+                .stream()
+                .filter(Objects::nonNull)
+                .mapToInt(p -> p.getValue() + p.getDecay())
+                .sum();
     }
 }

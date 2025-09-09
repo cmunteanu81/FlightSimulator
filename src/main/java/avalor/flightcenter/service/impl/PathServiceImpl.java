@@ -8,7 +8,9 @@ import avalor.flightcenter.service.PathService;
 import avalor.flightcenter.utils.DecaySimulator;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -20,6 +22,7 @@ public class PathServiceImpl implements PathService, Runnable {
     private final List<Drone> activeDrones = Collections.synchronizedList(new ArrayList<>());
     private final ConcurrentMap<String, Position> crtTargets = new ConcurrentHashMap<>();
     private MapService mapService = null;
+
 
     @Override
     public void setMapService(MapService service) {
@@ -70,7 +73,7 @@ public class PathServiceImpl implements PathService, Runnable {
 
         Drone newDrone = new Drone(droneName, initialPos);
         activeDrones.add(newDrone);
-        recordVisitedPosition(droneName, initialPos);
+        setDronePositionInPlane(droneName, initialPos);
 
         return newDrone;
     }
@@ -107,11 +110,11 @@ public class PathServiceImpl implements PathService, Runnable {
             }
             // Set the new position
             crtDrone.setCurrentPosition(Position.builder(newPosition).build());
-            recordVisitedPosition(droneName, newPosition);
+            setDronePositionInPlane(droneName, newPosition);
         }
     }
 
-    private synchronized void recordVisitedPosition(String droneName, Position position) {
+    private synchronized void setDronePositionInPlane(String droneName, Position position) {
         if (!visitedPositions.contains(position)) {
             visitedPositions.add(position);
         }
@@ -133,24 +136,21 @@ public class PathServiceImpl implements PathService, Runnable {
                         exclusionList.add(crtTargets.get(targetName));
                     }
                     // If no target is set, or the target us reached of the target has already been visited, find a new destination
-                    if (drone.isTargetReached() /*|| isVisited(drone.getTargetPosition())*/) {
+                    if (drone.isTargetReached() || isVisited(drone.getTargetPosition())) {
                         // Find a new target for this drone
                         drone.setTargetPosition(PathCalculator.getClosestTarget(drone.getCurrentPosition(), navigationPlanes, exclusionList));
                         // The path to the target is yet to be determined
                         drone.setTargetPath(null);
-                        // Optional: print traveled path value and clear navigation history???
+                        // Free position for make sure other drones are able to fly
+                        setNavigationPlaneOccupied(drone.getName(), drone.getCurrentPosition(), false);
                     }
                     // If the drone has a locked target, either continue on the path or get the next path part (long distances)
                     if (drone.getTargetPosition() != null) {
                         // The current target is marked as locked
                         crtTargets.put(drone.getName(), drone.getTargetPosition());
-
                         if (drone.getNextPossibleMove() != null) {
-                            if (!isNavigationPlaneOccupied(drone.getNextPossibleMove())) {
-                                // Only if the drone can move into the space
-                                recordDronePosition(drone.getName(), drone.getNextPossibleMove());
-                                drone.moveToNextPosition();
-                                //Otherwise wait for the plane to be vacated
+                            if (!droneMovedIntoFreeSpace(drone)) {
+                                // Just wait, but maybe a re-route is needed
                             }
                         } else {
                             // If there is no path set, retrieve a new path towards the target
@@ -158,22 +158,15 @@ public class PathServiceImpl implements PathService, Runnable {
                             if (!calculatedPath.isEmpty()) {
                                 drone.setTargetPath(calculatedPath);
                             } else {
-                                // There is no possible path, target should be abandoned
+                                // There is no possible path, target is abandoned
                                 drone.setTargetPosition(null);
                                 drone.setTargetPath(null);
                                 crtTargets.remove(drone.getName());
-                                // Free position for make sure other drones are able to fly
-                                setNavigationPlaneOccupied(drone.getName(), drone.getCurrentPosition(), false);
                             }
                         }
-                    } else {
-                        System.out.println("No new target for drone " + drone.getName() + " Waiting  at position: ("
-                                + drone.getCurrentPosition().getPosX() + ", " + drone.getCurrentPosition().getPosY() + "). ");
-                        // Simulate that the drone goes out of the navigation map when there are no targets anymore
-                        setNavigationPlaneOccupied(drone.getName(), drone.getCurrentPosition(), false);
                     }
                 } else {
-                    printTravelledPathValue(drone);
+                    printTravelledPathValues();
                     System.out.println("Target reached; start over");
                     restartNavigation();
                     break;
@@ -185,34 +178,93 @@ public class PathServiceImpl implements PathService, Runnable {
         }
     }
 
-    private synchronized void printTravelledPathValue(Drone drone) {
-        int totalPathValue = Optional.ofNullable(drone.getHistoryPath())
-                .orElseGet(List::of)
-                .stream()
-                .filter(Objects::nonNull)
-                .mapToInt(p -> p.getValue() + p.getDecay())
-                .sum();
-        System.out.println("Travelled path info for drone " + drone.getName() + " Number of steps: " + drone.getHistoryPath().size()
-                + ". Path value: " + totalPathValue);
+    private synchronized void printTravelledPathValues() {
+        for (Drone drone : activeDrones) {
+            System.out.println("Travelled path info for drone " + drone.getName() + " Number of steps: " + drone.getHistoryPath().size()
+                    + ". Path value: " + drone.getTravelledPathValue());
+            System.out.println("Current position: " + drone.getCurrentPosition() + ", Target position: " + drone.getTargetPosition()
+                    + ", Target assigned: " + (drone.getTargetPosition() != null));
+        }
     }
 
-    private synchronized boolean isNavigationPlaneOccupied(Position position) {
-        if (position == null) {
-            return false;
+    private synchronized boolean droneMovedIntoFreeSpace(Drone drone) {
+        Position nextPossiblePosition = drone.getNextPossibleMove();
+        boolean droneMoved = false;
+        if (nextPossiblePosition != null) {
+            if (isNavigationPlaneFree(nextPossiblePosition)) {
+                // Only if the drone can move into the space
+                recordDronePosition(drone.getName(), nextPossiblePosition);
+                drone.moveToNextPosition();
+                droneMoved = true;
+                //Otherwise wait for the plane to be vacated
+            } else {
+                // Find another free space around the current position
+                System.out.println("Next location is blocked; finding free space for drone " + drone.getName());
+                nextPossiblePosition = findFreeSpace(drone.getCurrentPosition(), drone.getTargetPosition());
+                if (nextPossiblePosition != null) {
+                    drone.getTargetPath().addFirst(drone.getCurrentPosition());
+                    drone.getTargetPath().addFirst(nextPossiblePosition);
+                    recordDronePosition(drone.getName(), nextPossiblePosition);
+                    drone.moveToNextPosition();
+                    // Force path recalculation
+                    drone.setTargetPath(null);
+                    droneMoved = true;
+                }
+            }
         }
-        return navigationPlanes.get(position.getPosY()).get(position.getPosX()).isOccupied();
+        return droneMoved;
     }
 
-    private synchronized void setNavigationPlaneOccupied(String droneName, Position position, boolean occupied) {
+    private synchronized Position findFreeSpace(Position crtPosition, Position targetPosition) {
+        if (crtPosition == null) {
+            return null;
+        }
+
+        List<Position> availablePositions = getNeighbours(crtPosition);
+        return availablePositions.stream().filter(this::isNavigationPlaneFree).findFirst().orElse(null);
+    }
+
+    public synchronized List<Position> getNeighbours(Position crtPosition) {
+        List<Position> neighbours = new ArrayList<>();
+        if (navigationPlanes.isEmpty() || crtPosition == null) {
+            return neighbours;
+        }
+
+        if (positionOutOfBounds(crtPosition.getPosX(), crtPosition.getPosY())) {
+            return neighbours;
+        }
+
+        int height = navigationPlanes.size();
+        int width = navigationPlanes.getFirst().size();
+
+        if (crtPosition.getPosY() + 1 < height) {
+            neighbours.add(Position.builder(navigationPlanes.get(crtPosition.getPosY() + 1).get(crtPosition.getPosX())).build());
+        }
+        if (crtPosition.getPosY() - 1 >= 0) {
+            neighbours.add(Position.builder(navigationPlanes.get(crtPosition.getPosY() - 1).get(crtPosition.getPosX())).build());
+        }
+        if (crtPosition.getPosX() + 1 < width) {
+            neighbours.add(Position.builder(navigationPlanes.get(crtPosition.getPosY()).get(crtPosition.getPosX() + 1)).build());
+            if (crtPosition.getPosY() + 1 < height)
+                neighbours.add(Position.builder(navigationPlanes.get(crtPosition.getPosY() + 1).get(crtPosition.getPosX() + 1)).build());
+            if (crtPosition.getPosY() - 1 >= 0)
+                neighbours.add(Position.builder(navigationPlanes.get(crtPosition.getPosY() - 1).get(crtPosition.getPosX() + 1)).build());
+        }
+        if (crtPosition.getPosX() - 1 >= 0) {
+            neighbours.add(Position.builder(navigationPlanes.get(crtPosition.getPosY()).get(crtPosition.getPosX() - 1)).build());
+            if (crtPosition.getPosY() + 1 < height)
+                neighbours.add(Position.builder(navigationPlanes.get(crtPosition.getPosY() + 1).get(crtPosition.getPosX() - 1)).build());
+            if (crtPosition.getPosY() - 1 >= 0)
+                neighbours.add(Position.builder(navigationPlanes.get(crtPosition.getPosY() - 1).get(crtPosition.getPosX() - 1)).build());
+        }
+        return neighbours;
+    }
+
+    private synchronized boolean isNavigationPlaneFree(Position position) {
         if (position == null) {
-            return;
+            return true;
         }
-        navigationPlanes.get(position.getPosY()).get(position.getPosX()).setOccupied(occupied);
-        if (occupied) {
-            mapService.setColor(position.getPosX(), position.getPosY(), (activeDrones.indexOf(findDroneByName(droneName)) + 4));
-        } else {
-            mapService.setColor(position.getPosX(), position.getPosY(), 3);
-        }
+        return !navigationPlanes.get(position.getPosY()).get(position.getPosX()).isOccupied();
     }
 
     private synchronized boolean isVisited(Position position) {
@@ -220,6 +272,19 @@ public class PathServiceImpl implements PathService, Runnable {
             return false;
         }
         return visitedPositions.contains(position);
+    }
+
+    private synchronized void setNavigationPlaneOccupied(String droneName, Position position, boolean occupied) {
+        if (position == null) {
+            return;
+        }
+        navigationPlanes.get(position.getPosY()).get(position.getPosX()).setOccupied(occupied);
+        // Mark the change in the map service as well
+        if (occupied) {
+            mapService.setColor(position.getPosX(), position.getPosY(), (activeDrones.indexOf(findDroneByName(droneName)) + 4));
+        } else {
+            mapService.setColor(position.getPosX(), position.getPosY(), 3);
+        }
     }
 
     private synchronized void applyDecayToNavigationPlanes(int decayVal, boolean clearAll) {
@@ -242,7 +307,7 @@ public class PathServiceImpl implements PathService, Runnable {
             drone.setTargetPosition(null);
             drone.setTargetPath(null);
             drone.clearHistoryPath();
-            recordVisitedPosition(drone.getName(), drone.getCurrentPosition());
+            setDronePositionInPlane(drone.getName(), drone.getCurrentPosition());
         }
         // Clear decay as well
         applyDecayToNavigationPlanes(0, true);

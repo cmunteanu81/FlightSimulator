@@ -147,20 +147,21 @@ public class PathCalculator {
     }
 
     private static Position getIntermediatePosition(Position startPosition, Position targetPosition, double maximumDistance) {
-        double distance = calculateDistance(startPosition, targetPosition);
-        double starX = startPosition.getPosX();
-        double starY = startPosition.getPosY();
-        double targetX = targetPosition.getPosX();
-        double targetY = targetPosition.getPosY();
+        double dx = targetPosition.getPosX() - startPosition.getPosX();
+        double dy = targetPosition.getPosY() - startPosition.getPosY();
+        double distance = Math.hypot(dx, dy);
 
-        if (Double.compare(distance, maximumDistance) > 0) {
-            double ratio = maximumDistance / distance;
-            double intX = (Double.compare(starX, targetX) > 0) ? starX - ratio * (starX - targetX) : starX + ratio * (targetX - starX);
-            double intY = (Double.compare(starY, targetY) > 0) ? starY - ratio * (starY - targetY) : starY + ratio * (targetY - starY);
-
-            return new Position((int) Math.floor(intX), (int) Math.floor(intY), 0);
-        } else {
-            return targetPosition;
+        // If target is within allowed distance, return the target itself
+        if (Double.compare(distance, maximumDistance) < 0) {
+            return Position.builder(targetPosition).build();
         }
+
+        // Compute an intermediate point along the vector from start to target
+        double ratio = maximumDistance / distance;
+        double intX = startPosition.getPosX() + dx * ratio;
+        double intY = startPosition.getPosY() + dy * ratio;
+
+        // Use floor to make sure we stay within the max distance boundary
+        return new Position((int) Math.floor(intX), (int) Math.floor(intY), 0);
     }
 }
