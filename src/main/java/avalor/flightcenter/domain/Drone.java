@@ -9,11 +9,10 @@ import java.util.List;
 public class Drone {
     @NotNull
     private final String name;
+    private final List<Position> historyPath = Collections.synchronizedList(new ArrayList<>());
     private Position currentPosition;
     private Position targetPosition;
     private List<Position> targetPath;
-    private final List<Position> historyPath = Collections.synchronizedList(new ArrayList<>());
-    private DroneState droneState;
 
 
     public Drone(String name, Position initialPosition) {
@@ -21,51 +20,47 @@ public class Drone {
         this.currentPosition = Position.builder(initialPosition).build();
         this.targetPosition = null;
         targetPath = null;
-        droneState = DroneState.IDLE;
     }
 
     public String getName() {
         return name;
     }
 
-    public Position getCurrentPosition() {
+    public synchronized Position getCurrentPosition() {
         return currentPosition;
     }
 
-    public void setCurrentPosition(Position currentPosition) {
+    public synchronized void setCurrentPosition(Position currentPosition) {
         this.currentPosition = currentPosition;
     }
 
-    public Position getTargetPosition() {
+    public synchronized Position getTargetPosition() {
         return targetPosition;
     }
 
-    public void setTargetPosition(Position targetPosition) {
-        this.targetPosition = targetPosition;
+    public synchronized void setTargetPosition(Position targetPosition) {
+        this.targetPosition = Position.builder(targetPosition).build();
     }
 
-    public void setTargetPath(List<Position> targetPath) {
-            this.targetPath = targetPath;
-    }
-
-    public boolean isMoving() {
-        return droneState == DroneState.MOVING;
-    }
-
-    public boolean isTargetReached() {
-        return currentPosition.equals(targetPosition);
-    }
-
-    public DroneState getDroneState() {
-        return droneState;
-    }
-
-    public void setDroneState(DroneState droneState) {
-        this.droneState = droneState;
-    }
-
-    public List<Position> getTargetPath() {
+    public synchronized List<Position> getTargetPath() {
         return targetPath;
+    }
+
+    public synchronized void setTargetPath(List<Position> targetPath) {
+        this.targetPath = targetPath;
+    }
+
+
+    public synchronized List<Position> getHistoryPath() {
+        return historyPath;
+    }
+
+    public synchronized void clearHistoryPath() {
+        historyPath.clear();
+    }
+
+    public synchronized boolean isTargetReached() {
+        return (targetPosition == null || currentPosition.equals(targetPosition));
     }
 
     public synchronized Position getNextPossibleMove() {
@@ -87,25 +82,5 @@ public class Drone {
         } else {
             return null;
         }
-    }
-
-    public synchronized Position goBack() {
-        if (historyPath.isEmpty()) {
-            return null;
-        }
-        Position lastPosition = historyPath.removeLast();
-        if (lastPosition != null) {
-            currentPosition = lastPosition;
-            return currentPosition;
-        }
-        return null;
-    }
-
-    public List<Position> getHistoryPath() {
-        return historyPath;
-    }
-
-    public synchronized void clearHistory() {
-            historyPath.clear();
     }
 }
