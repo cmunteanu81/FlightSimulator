@@ -28,7 +28,7 @@ public class PathServiceImpl implements PathService, Runnable {
 
     @Override
     public List<Position> getPath(String droneName) {
-        // Minimal placeholder path: a simple straight line of positions
+        // TODO Fix this or remove the functionality
         List<Position> positions = new ArrayList<>();
 
 //        positions = PathCalculator.calculatePath(dronePositions.get(droneName), navigationPlanes, visitedPositions);
