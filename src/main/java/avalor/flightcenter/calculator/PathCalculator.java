@@ -74,7 +74,7 @@ public class PathCalculator {
         allPositions.sort(
                 java.util.Comparator
                         .comparingInt((Position p) -> p.getValue() + p.getDecay())
-                        .thenComparingInt(Position::getDecay)
+                        .thenComparingInt(Position::getValue)
                         .reversed()
         );
         final int maxValue = allPositions.getFirst().getValue();

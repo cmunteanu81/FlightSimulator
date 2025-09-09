@@ -114,13 +114,13 @@ public class PathServiceImpl implements PathService, Runnable {
         synchronized (this) {
             for (Drone drone : activeDrones) {
                 if (visitedPositions.size() < navigationPlanes.size() * navigationPlanes.getFirst().size()) {
-//                    List<Position> exclusionList = new ArrayList<>(visitedPositions);
-//                    for (String targetName : crtTargets.keySet()) {
-//                        exclusionList.add(crtTargets.get(targetName));
-//                    }
+                    List<Position> exclusionList = new ArrayList<>(visitedPositions);
+                    for (String targetName : crtTargets.keySet()) {
+                        exclusionList.add(crtTargets.get(targetName));
+                    }
                     // If no target is set, or the target us reached of the target has already been visited, find a new destination
                     if (drone.getTargetPosition() == null || drone.isTargetReached() /*|| isVisited(drone.getTargetPosition())*/) {
-                        Position nextTarget = PathCalculator.getClosestTarget(drone.getCurrentPosition(), navigationPlanes, null);
+                        Position nextTarget = PathCalculator.getClosestTarget(drone.getCurrentPosition(), navigationPlanes, exclusionList);
                         drone.setTargetPosition(nextTarget);
                         drone.setTargetPath(null);
                         if (nextTarget != null) {
@@ -167,7 +167,7 @@ public class PathServiceImpl implements PathService, Runnable {
             }
 
             // Apply decay across the whole navigation plane
-            decay(1); // increase decay by 1 for non-occupied positions; occupied reset to 0
+            decay(1, false); // increase decay by 1 for non-occupied positions; occupied reset to 0
         }
     }
 
@@ -218,12 +218,18 @@ public class PathServiceImpl implements PathService, Runnable {
             drone.clearHistory();
             setOccupied(drone.getName(), drone.getCurrentPosition(), true);
         }
+        // reset decay as well
+        decay(0, true);
     }
     
-    private synchronized void decay(int decayVal) {
+    private synchronized void decay(int decayVal, boolean resetAll) {
         for (List<Position> row : navigationPlanes) {
             for (Position p : row) {
-                p.setDecay(p.isOccupied() ? 0 : p.getDecay() + decayVal);
+                if (resetAll) {
+                    p.setDecay(decayVal);
+                } else {
+                    p.setDecay(p.isOccupied() ? 0 : p.getDecay() + decayVal);
+                }
             }
         }
     }

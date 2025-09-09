@@ -5,7 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.Objects;
 
 public class Position {
-    private final int MAX_DECAY_VAL = Integer.MAX_VALUE;
+    private final int MAX_DECAY_VAL = 1000;
     private final int posX;
     private final int posY;
     private final int value;
