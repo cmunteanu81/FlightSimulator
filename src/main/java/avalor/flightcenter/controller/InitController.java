@@ -44,8 +44,9 @@ public class InitController {
                 continue; // skip invalid entries
             }
             Position currentPos = positionMapper.toDomain(current);
-            pathService.addDrone(name, currentPos);
-            // targetLocation is optional; if provided, we could set a target via another service call in future
+            if (pathService.addDrone(name, currentPos) == null) {
+                return ResponseEntity.badRequest().build();
+            }
         }
         return ResponseEntity.ok().build();
     }

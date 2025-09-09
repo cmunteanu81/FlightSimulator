@@ -46,6 +46,9 @@
         <input type="file" name="file" accept=".txt" required />
         <button type="submit">Render Map</button>
     </form>
+    <form th:action="@{/map/reset}" method="post">
+        <button type="submit">Reset</button>
+    </form>
 
     <div th:if="${matrix}">
         <h2>Navigation Map</h2>

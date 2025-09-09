@@ -27,7 +27,7 @@ public class PathController {
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public BasicPathResponse getPath(@RequestParam("droneName") String droneName) {
-        List<Position> positions = pathService.getPath(droneName);
+        List<Position> positions = pathService.getPathForDrone(droneName);
         List<PositionDTO> dtoList = positionMapper.toDtoList(positions);
         return new BasicPathResponse(droneName, dtoList);
     }

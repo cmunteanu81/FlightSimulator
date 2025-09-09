@@ -36,7 +36,7 @@ public class MapServiceImpl implements MapService {
     }
 
     @Override
-    public synchronized void initColorMatrix(int rows, int cols) {
+    public synchronized void init(int rows, int cols) {
         if (rows <= 0 || cols <= 0) {
             colorMatrix.clear();
             return;
@@ -65,5 +65,20 @@ public class MapServiceImpl implements MapService {
         }
         String color = PALETTE[Math.floorMod(value, PALETTE.length)];
         row.set(posX, color);
+    }
+
+    @Override
+    public synchronized void reset() {
+        colorMatrix.clear();
+    }
+
+    @Override
+    public void clear() {
+        if (colorMatrix.isEmpty()) {
+            return;
+        }
+        for (List<String> row : colorMatrix) {
+            row.replaceAll(s -> PALETTE[0]);
+        }
     }
 }

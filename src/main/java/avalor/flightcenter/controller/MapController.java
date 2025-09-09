@@ -39,6 +39,25 @@ public class MapController {
         return "map";
     }
 
+    @PostMapping("/reset")
+    public String reset(Model model) {
+        // Reset the services
+        pathService.reset();
+        mapService.reset();
+        // Clear the map attributes, so they can be re-initialized on the next upload
+        model.addAttribute("matrix", null);
+        model.addAttribute("colors", null);
+        model.addAttribute("rows", null);
+        model.addAttribute("cols", null);
+        model.addAttribute("renderedRows", null);
+        model.addAttribute("renderedCols", null);
+        model.addAttribute("sampleStep", null);
+        model.addAttribute("sampled", null);
+        model.addAttribute("maxVal", null);
+        model.addAttribute("minVal", null);
+        return "redirect:/map";
+    }
+
     // Returns latest computed colors for the last rendered matrix (if any)
     @GetMapping(value = "/colors", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
@@ -79,9 +98,9 @@ public class MapController {
             }
 
             // Initialize the navigation planes
-            mapService.initColorMatrix(toRender.size(), toRender.getFirst().size());
+            mapService.init(toRender.size(), toRender.getFirst().size());
 
-            pathService.setNavigationPlanes(toRender);
+            pathService.init(toRender);
 //            pathService.addDrone("Drone1", new avalor.flightcenter.domain.Position(0, 0, matrix.get(0).get(0)));
 //            pathService.addDrone("Drone2", new avalor.flightcenter.domain.Position(1, 0, matrix.get(1).get(0)));
 //            pathService.addDrone("Drone3", new avalor.flightcenter.domain.Position(2, 0, matrix.get(2).get(0)));

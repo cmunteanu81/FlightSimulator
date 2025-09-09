@@ -27,7 +27,56 @@ public class PathServiceImpl implements PathService, Runnable {
     }
 
     @Override
-    public List<Position> getPath(String droneName) {
+    public synchronized void reset() {
+        activeDrones.clear();
+        navigationPlanes.clear();
+        restartNavigation();
+    }
+
+    @Override
+    public void init(List<List<Integer>> navigationMatrix) {
+        for (int i = 0; i < navigationMatrix.size(); i++) {
+            List<Integer> row = navigationMatrix.get(i);
+            List<Position> positionRow = new ArrayList<>();
+            for (int j = 0; j < row.size(); j++) {
+                Integer value = row.get(j);
+                positionRow.add(new Position(j, i, value));
+            }
+            navigationPlanes.add(positionRow);
+        }
+        // TODO This is just for testing purposes, remove it when not needed
+        DecaySimulator.start(500, this);
+    }
+
+    @Override
+    public synchronized Drone findDroneByName(String name) {
+        for (Drone drone : activeDrones) {
+            if (drone.getName().equals(name)) {
+                return drone;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public synchronized Drone addDrone(String droneName, Position initialPos) {
+        if (activeDrones.size() >= MAX_DRONES) {
+            System.out.println("Max drones reached");
+            return null; // Max drones reached
+        }
+         if (initialPos == null || positionOutOfBounds(initialPos.getPosX(), initialPos.getPosY())) {
+             return null;
+        }
+
+        Drone newDrone = new Drone(droneName, initialPos);
+        activeDrones.add(newDrone);
+        recordVisitedPosition(droneName, initialPos);
+
+        return newDrone;
+    }
+
+    @Override
+    public List<Position> getPathForDrone(String droneName) {
         // TODO Fix this or remove the functionality
         List<Position> positions = new ArrayList<>();
 
@@ -36,7 +85,7 @@ public class PathServiceImpl implements PathService, Runnable {
     }
 
     @Override
-    public synchronized void setPosition(String droneName, Position newPosition) {
+    public synchronized void recordDronePosition(String droneName, Position newPosition) {
         if (droneName == null || newPosition == null) {
             return; //  Sanity check
         }
@@ -58,44 +107,6 @@ public class PathServiceImpl implements PathService, Runnable {
         }
     }
 
-    @Override
-    public void setNavigationPlanes(List<List<Integer>> valueMatrix) {
-        for (int i = 0; i < valueMatrix.size(); i++) {
-            List<Integer> row = valueMatrix.get(i);
-            List<Position> positionRow = new ArrayList<>();
-            for (int j = 0; j < row.size(); j++) {
-                Integer value = row.get(j);
-                positionRow.add(new Position(j, i, value));
-            }
-            navigationPlanes.add(positionRow);
-        }
-
-        DecaySimulator.start(500, this);
-    }
-
-    @Override
-    public synchronized Drone findDroneByName(String name) {
-        for (Drone drone : activeDrones) {
-            if (drone.getName().equals(name)) {
-                return drone;
-            }
-        }
-        return null;
-    }
-
-    @Override
-     public synchronized Drone addDrone(String droneName, Position initialPos) {
-        if (activeDrones.size() >= MAX_DRONES) {
-            System.out.println("Max drones reached");
-            return null; // Max drones reached
-        }
-        Drone newDrone = new Drone(droneName, initialPos);
-        activeDrones.add(newDrone);
-        recordVisitedPosition(droneName, initialPos);
-
-        return newDrone;
-    }
-
     private synchronized void recordVisitedPosition(String droneName, Position position) {
         if (!visitedPositions.contains(position)) {
             visitedPositions.add(position);
@@ -105,7 +116,7 @@ public class PathServiceImpl implements PathService, Runnable {
     }
 
     private synchronized boolean positionOutOfBounds(int x, int y) {
-        return false;
+        return navigationPlanes.isEmpty() || x < 0 || x >= navigationPlanes.getFirst().size() || y < 0 || y >= navigationPlanes.size();
     }
 
     @Override
@@ -143,7 +154,7 @@ public class PathServiceImpl implements PathService, Runnable {
                             }
                             // Move along the path
                             Position nextPosition = dronePath.removeFirst();
-                            setPosition(drone.getName(), nextPosition);
+                            recordDronePosition(drone.getName(), nextPosition);
                         } else {
                             // Check if the distance is too big maybe here?
                             List<Position> calculatedPath = PathCalculator.calculatePath(drone.getCurrentPosition(), drone.getTargetPosition(), navigationPlanes);
@@ -162,12 +173,13 @@ public class PathServiceImpl implements PathService, Runnable {
                     }
                 } else {
                     System.out.println("Target reached; start over");
-                    reset();
+                    restartNavigation();
                 }
             }
 
-            // Apply decay across the whole navigation plane
-            decay(1, false); // increase decay by 1 for non-occupied positions; occupied reset to 0
+            // Update decay across the whole navigation plane
+            // Increase decay by 1 for non-occupied positions; clear decay for occupied ones
+            decay(1, false);
         }
     }
 
@@ -208,24 +220,24 @@ public class PathServiceImpl implements PathService, Runnable {
         return visitedPositions.contains(position);
     }
 
-    private synchronized void reset() {
+    private synchronized void restartNavigation() {
         crtTargets.clear();
         visitedPositions.clear();
-        mapService.initColorMatrix(navigationPlanes.getFirst().size(), navigationPlanes.size());
+        mapService.clear();
         for (Drone drone : activeDrones) {
             drone.setTargetPosition(null);
             drone.setTargetPath(null);
             drone.clearHistory();
-            setOccupied(drone.getName(), drone.getCurrentPosition(), true);
+            recordVisitedPosition(drone.getName(), drone.getCurrentPosition());
         }
-        // reset decay as well
+        // Clear decay as well
         decay(0, true);
     }
     
-    private synchronized void decay(int decayVal, boolean resetAll) {
+    private synchronized void decay(int decayVal, boolean clearAll) {
         for (List<Position> row : navigationPlanes) {
             for (Position p : row) {
-                if (resetAll) {
+                if (clearAll) {
                     p.setDecay(decayVal);
                 } else {
                     p.setDecay(p.isOccupied() ? 0 : p.getDecay() + decayVal);

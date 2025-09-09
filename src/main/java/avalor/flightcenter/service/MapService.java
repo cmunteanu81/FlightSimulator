@@ -8,6 +8,9 @@ public interface MapService {
      * The returned list has the same shape as input.
      */
     List<List<String>> getColors();
-    void initColorMatrix(int rows, int cols);
+    void init(int rows, int cols);
+    void reset();
     void setColor(int posX, int posY, int value);
+    void clear();
+
 }
